@@ -316,6 +316,8 @@ fn construct_config(mut opts: Opts, pattern_regexps: &[String]) -> Result<Config
         exclude_patterns: opts.exclude.iter().map(|p| String::from("!") + p).collect(),
         ignore_files: std::mem::take(&mut opts.ignore_file),
         size_constraints: size_limits,
+        xattr_constraint: opts.xattr.clone(),
+        xattr_ignore: opts.xattr_ignore.clone(),
         time_constraints,
         #[cfg(unix)]
         owner_constraint,

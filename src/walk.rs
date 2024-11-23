@@ -597,6 +597,56 @@ impl WorkerState {
                     }
                 }
 
+                // Filter out xattr ignore constraints
+                for filter in config.xattr_ignore.iter() {
+                    let matches = match filter {
+                        crate::filter::XAttrFilter::Has(os_string) => {
+                            if let Some(xattrs) = entry.xattrs() {
+                                xattrs.contains(os_string)
+                            } else {
+                                false
+                            }
+                        }
+                        crate::filter::XAttrFilter::Matches(os_string, pattern) => {
+                            if let Some(v) = entry.xattr(&os_string) {
+                                // regex.is_match(v.as_ref())
+                                pattern == v
+                            } else {
+                                false
+                            }
+                        }
+                    };
+                    // OR logic
+                    if matches {
+                        return WalkState::Skip;
+                    }
+                }
+
+                // Filter out xattr constraints
+                for filter in config.xattr_constraint.iter() {
+                    let matches = match filter {
+                        crate::filter::XAttrFilter::Has(os_string) => {
+                            if let Some(xattrs) = entry.xattrs() {
+                                xattrs.contains(os_string)
+                            } else {
+                                false
+                            }
+                        }
+                        crate::filter::XAttrFilter::Matches(os_string, pattern) => {
+                            if let Some(v) = entry.xattr(&os_string) {
+                                // regex.is_match(v.as_ref())
+                                pattern == v
+                            } else {
+                                false
+                            }
+                        }
+                    };
+                    // AND logic
+                    if !matches {
+                        return WalkState::Continue;
+                    }
+                }
+
                 if config.is_printing() {
                     if let Some(ls_colors) = &config.ls_colors {
                         // Compute colors in parallel

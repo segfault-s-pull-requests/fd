@@ -1,12 +1,17 @@
 use std::cell::OnceCell;
-use std::ffi::OsString;
+use std::collections::BTreeMap;
+use std::ffi::{OsStr, OsString};
 use std::fs::{FileType, Metadata};
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
+use append_only_vec::AppendOnlyVec;
 use lscolors::{Colorable, LsColors, Style};
 
 use crate::config::Config;
 use crate::filesystem::strip_current_dir;
+
+type XAttr = Vec<u8>;
 
 #[derive(Debug)]
 enum DirEntryInner {
@@ -19,6 +24,14 @@ pub struct DirEntry {
     inner: DirEntryInner,
     metadata: OnceCell<Option<Metadata>>,
     style: OnceCell<Option<Style>>,
+
+    xattr: XAttrSet,
+}
+
+#[derive(Default, Debug)]
+pub struct XAttrSet {
+    list: OnceCell<Option<Vec<OsString>>>,
+    values: AppendOnlyVec<(OsString, Option<XAttr>)>,
 }
 
 impl DirEntry {
@@ -28,6 +41,7 @@ impl DirEntry {
             inner: DirEntryInner::Normal(e),
             metadata: OnceCell::new(),
             style: OnceCell::new(),
+            xattr: Default::default(),
         }
     }
 
@@ -36,6 +50,7 @@ impl DirEntry {
             inner: DirEntryInner::BrokenSymlink(path),
             metadata: OnceCell::new(),
             style: OnceCell::new(),
+            xattr: Default::default(),
         }
     }
 
@@ -85,6 +100,37 @@ impl DirEntry {
                 DirEntryInner::BrokenSymlink(path) => path.symlink_metadata().ok(),
             })
             .as_ref()
+    }
+
+    pub fn xattrs(&self) -> Option<&[OsString]> {
+        self.xattr
+            .list
+            .get_or_init(|| match &self.inner {
+                DirEntryInner::Normal(e) => e.xattrs().ok().map(|x| x.collect()),
+                DirEntryInner::BrokenSymlink(_path) => None,
+            })
+            .as_deref()
+    }
+
+    pub fn xattr(&self, name: &OsStr) -> Option<&XAttr> {
+        match self.xattr.values.iter().find(|a| a.0 == name) {
+            None => {
+                if let Some(list) = self.xattr.list.get() {
+                    if list.is_none() || !list.as_ref().unwrap().iter().any(|a| a == &name) {
+                        return None;
+                    }
+                }
+
+                let value = match &self.inner {
+                    DirEntryInner::Normal(e) => e.xattr(name).ok().flatten(),
+                    // XAttrs on symlinks themselves are not allowed
+                    DirEntryInner::BrokenSymlink(_path) => None,
+                };
+                let i = self.xattr.values.push((name.to_owned(), value));
+                self.xattr.values[i].1.as_ref()
+            }
+            Some(v) => v.1.as_ref(),
+        }
     }
 
     pub fn depth(&self) -> Option<usize> {

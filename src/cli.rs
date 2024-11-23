@@ -17,6 +17,7 @@ use crate::filesystem;
 #[cfg(unix)]
 use crate::filter::OwnerFilter;
 use crate::filter::SizeFilter;
+use crate::filter::XAttrFilter;
 
 #[derive(Parser)]
 #[command(
@@ -452,6 +453,24 @@ pub struct Opts {
         long_help,
         )]
     pub owner: Option<OwnerFilter>,
+
+    /// Filter files by their extended file attributes.
+    /// When passed multible times, composes by AND
+    #[arg(long, value_parser = XAttrFilter::from_string, value_name = "name[=value]",
+        help = "Filter by xattr",
+        long_help,
+        )]
+    pub xattr: Vec<XAttrFilter>,
+
+    /// Ignore files and directories by their extended file attributes.
+    /// When passed multible times, composes by OR
+    #[arg(long, value_parser = XAttrFilter::from_string, value_name = "name[=value]",
+        env = "XATTR_IGNORE",
+        default_value = "user.xdg.robots.index=false",
+        help = "Ignore files/dirs by xattr",
+        long_help,
+        )]
+    pub xattr_ignore: Vec<XAttrFilter>,
 
     /// Instead of printing the file normally, print the format string with the following placeholders replaced:
     ///   '{}': path (of the current search result)

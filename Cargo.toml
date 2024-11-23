@@ -49,10 +49,12 @@ normpath = "1.1.1"
 crossbeam-channel = "0.5.13"
 clap_complete = {version = "4.5.28", optional = true}
 faccess = "0.2.4"
+xattr = "1.3.1"
+append-only-vec = "0.1.7"
 
 [dependencies.clap]
 version = "4.5.20"
-features = ["suggestions", "color", "wrap_help", "cargo", "derive"]
+features = ["suggestions", "color", "wrap_help", "cargo", "derive", "env"]
 
 [dependencies.chrono]
 version = "0.4.38"
@@ -92,3 +94,7 @@ use-jemalloc = ["jemallocator"]
 completions = ["clap_complete"]
 base = ["use-jemalloc"]
 default = ["use-jemalloc", "completions"]
+
+[patch.crates-io]
+ignore = { path = "forks/ripgrep/crates/ignore" }
+walkdir = { path = "forks/walkdir" }

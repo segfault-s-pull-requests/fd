@@ -7,7 +7,7 @@ use crate::exec::CommandSet;
 use crate::filetypes::FileTypes;
 #[cfg(unix)]
 use crate::filter::OwnerFilter;
-use crate::filter::{SizeFilter, TimeFilter};
+use crate::filter::{SizeFilter, TimeFilter, XAttrFilter};
 use crate::fmt::FormatTemplate;
 
 /// Configuration options for *fd*.
@@ -112,6 +112,12 @@ pub struct Config {
     #[cfg(unix)]
     /// User/group ownership constraint
     pub owner_constraint: Option<OwnerFilter>,
+
+    /// Extended attributes to treat like hidden folders
+    pub xattr_ignore: Vec<XAttrFilter>,
+
+    /// Extended attributes required to show
+    pub xattr_constraint: Vec<XAttrFilter>,
 
     /// Whether or not to display filesystem errors
     pub show_filesystem_errors: bool,
